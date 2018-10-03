@@ -21,8 +21,14 @@
 package main
 
 import (
+	"net/http"
+	_ "net/http/pprof"
+	"time"
+
 	"github.com/Sirupsen/logrus"
+
 	c "github.com/doitintl/kubeip/pkg/client"
+
 	cfg "github.com/doitintl/kubeip/pkg/config"
 	"github.com/doitintl/kubeip/pkg/kipcompute"
 )
@@ -32,6 +38,15 @@ var version string
 var build_date string
 
 func main() {
+	customFormatter := new(logrus.TextFormatter)
+	customFormatter.TimestampFormat = time.RFC3339Nano
+	logrus.SetFormatter(customFormatter)
+
+	// Expose pprof on http://localhost:6060/debug/pprof/
+	go func() {
+		logrus.Info(http.ListenAndServe("localhost:6060", nil))
+	}()
+
 	config, _ = cfg.NewConfig()
 	cluster, err := kipcompute.ClusterName()
 	if err != nil {

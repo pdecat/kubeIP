@@ -118,12 +118,18 @@ func replaceIP(projectID string, zone string, instance string, config *cfg.Confi
 		logrus.WithFields(logrus.Fields{"pkg": "kubeip", "function": "replaceIP"}).Errorf("Instance not found %s zone %s: %q", instance, zone, err)
 		return err
 	}
+	// TODO: list access configs to retrieve access config name and interface
 	op, err := computeService.Instances.DeleteAccessConfig(projectID, zone, instance, "external-nat", "nic0").Do()
 	if err != nil {
 		logrus.Errorf("DeleteAccessConfig %q", err)
 		return err
 	}
+	logrus.WithFields(logrus.Fields{"pkg": "kubeip", "function": "replaceIP"}).Infof("Access config deletion in progress for instance %s", instance)
+
+	// TODO: check completion result
 	waitForComplition(projectID, zone, op)
+	logrus.WithFields(logrus.Fields{"pkg": "kubeip", "function": "replaceIP"}).Infof("Access config deleted for instance %s", instance)
+
 	accessConfig := &compute.AccessConfig{
 		Name:  "External NAT",
 		Type:  "ONE_TO_ONE_NAT",
@@ -135,6 +141,7 @@ func replaceIP(projectID string, zone string, instance string, config *cfg.Confi
 		logrus.Errorf("AddAccessConfig %q", err)
 		return err
 	}
+	logrus.WithFields(logrus.Fields{"pkg": "kubeip", "function": "replaceIP"}).Infof("Access config creation in progress for instance %s with IP %s", instance, addr)
 	waitForComplition(projectID, zone, op)
 	logrus.WithFields(logrus.Fields{"pkg": "kubeip", "function": "replaceIP"}).Infof("Replaced IP for %s zone %s new ip %s", instance, zone, addr)
 	oldNode, err := utils.GetNodeByIP(addr)
@@ -199,6 +206,7 @@ func Kubeip(instance <-chan types.Instance, config *cfg.Config) {
 	for {
 		inst := <-instance
 		logrus.WithFields(logrus.Fields{"pkg": "kubeip", "function": "Kubeip"}).Infof("Working on %s in zone %s", inst.Name, inst.Zone)
+		// TODO: handle returned error?
 		replaceIP(inst.ProjectID, inst.Zone, inst.Name, config)
 	}
 }
